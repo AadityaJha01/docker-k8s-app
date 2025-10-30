@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K8s Web App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 CI/CD Pipeline Demo</h1>
+            <p>Dockerized Web App on Kubernetes</p>
+        </header>
+        
+        <div class="content">
+            <div class="card">
+                <h2>Application Info</h2>
+                <div id="app-info">
+                    <p><strong>App Name:</strong> <span id="app-name">webapp</span></p>
+                    <p><strong>Version:</strong> <span id="app-version">1.0.0</span></p>
+                    <p><strong>Environment:</strong> <span id="environment">Production</span></p>
+                    <p><strong>Host:</strong> <span id="hostname">Loading...</span></p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>CI/CD Pipeline Status</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-icon">📦</span>
+                        <span>Docker Build</span>
+                        <span class="status-badge success">Success</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon">⚙️</span>
+                        <span>K8s Deployment</span>
+                        <span class="status-badge success">Success</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon">🔗</span>
+                        <span>Service Running</span>
+                        <span class="status-badge success">Success</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>System Metrics</h2>
+                <div id="metrics">
+                    <p>🕒 <strong>Uptime:</strong> <span id="uptime">0</span> seconds</p>
+                    <p>📊 <strong>Requests:</strong> <span id="request-count">0</span></p>
+                    <button onclick="incrementCounter()">Test Request</button>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Built with Docker 🐳 & Kubernetes ☸️ | Deployed via Jenkins ⚙️</p>
+        </footer>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
