@@ -31,9 +31,24 @@ pipeline {
             steps {
                 script {
                     sh """
-                    echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin
+                    echo \"${DOCKERHUB_CREDENTIALS_PSW}\" | docker login -u \"${DOCKERHUB_CREDENTIALS_USR}\" --password-stdin
                     docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
                     docker push ${DOCKER_IMAGE}:latest
+                    """
+                }
+            }
+        }
+        
+        stage('Update K8s Deployment') {
+            steps {
+                script {
+                    sh """
+                    # Update the image tag in deployment.yaml
+                    sed -i 's|image: ${DOCKER_IMAGE}:.*|image: ${DOCKER_IMAGE}:${DOCKER_TAG}|g' k8s-deployment.yaml
+                    
+                    # Verify the change
+                    echo "=== Updated k8s-deployment.yaml ==="
+                    grep -n "image:" k8s-deployment.yaml
                     """
                 }
             }
@@ -43,8 +58,11 @@ pipeline {
             steps {
                 script {
                     sh """
+                    echo "=== Applying Kubernetes manifests ==="
                     kubectl apply -f k8s-deployment.yaml
-                    kubectl rollout status deployment/webapp-deployment
+                    
+                    echo "=== Waiting for deployment rollout ==="
+                    kubectl rollout status deployment/webapp-deployment --timeout=300s
                     """
                 }
             }
@@ -54,9 +72,20 @@ pipeline {
             steps {
                 script {
                     sh """
+                    echo "=== Waiting for pods to be ready ==="
                     sleep 30
-                    kubectl get pods -o wide
+                    
+                    echo "=== Pods Status ==="
+                    kubectl get pods -o wide -l app=webapp
+                    
+                    echo "=== Services Status ==="
                     kubectl get services
+                    
+                    echo "=== Deployment Status ==="
+                    kubectl get deployment webapp-deployment
+                    
+                    echo "=== Checking pod logs ==="
+                    kubectl logs -l app=webapp --tail=10
                     """
                 }
             }
@@ -65,20 +94,43 @@ pipeline {
     
     post {
         always {
-            sh 'docker logout'
+            sh 'docker logout || true'
             cleanWs()
+            
+            // Save deployment information
+            script {
+                currentBuild.description = "Image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
+            }
         }
         success {
             emailext (
                 subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-                body: "The build ${env.BUILD_URL} completed successfully.",
+                body: """
+                Pipeline completed successfully!
+                
+                Application: ${env.JOB_NAME}
+                Build Number: ${env.BUILD_NUMBER}
+                Docker Image: ${DOCKER_IMAGE}:${DOCKER_TAG}
+                Build URL: ${env.BUILD_URL}
+                
+                Deployment Status:
+                - $(kubectl get deployment webapp-deployment -o jsonpath='{.status.availableReplicas}')/$(kubectl get deployment webapp-deployment -o jsonpath='{.status.replicas}') pods available
+                """,
                 to: "jhaa98676@gmail.com"
             )
         }
         failure {
             emailext (
                 subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-                body: "The build ${env.BUILD_URL} failed. Please check the logs.",
+                body: """
+                Pipeline failed!
+                
+                Application: ${env.JOB_NAME}
+                Build Number: ${env.BUILD_NUMBER}
+                Build URL: ${env.BUILD_URL}
+                
+                Please check the Jenkins logs for details.
+                """,
                 to: "jhaa98676@gmail.com"
             )
         }

@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: webapp
-        image: deku013/webapp:latest
+        image: deku013/webapp:BUILD_NUMBER  # This will be replaced by Jenkins
         ports:
         - containerPort: 80
         resources:
@@ -28,13 +28,13 @@ spec:
             cpu: "100m"
         livenessProbe:
           httpGet:
-            path: /health
+            path: /  # Changed from /health to root
             port: 80
-          initialDelaySeconds: 5
+          initialDelaySeconds: 15  # Increased for app startup
           periodSeconds: 10
         readinessProbe:
           httpGet:
-            path: /health
+            path: /  # Changed from /health to root
             port: 80
           initialDelaySeconds: 5
           periodSeconds: 5
