@@ -2,9 +2,7 @@ pipeline {
     agent any
     
     environment {
-        // Since you checked "Treat username as secret", use _USR and _PSW suffixes
         DOCKERHUB_CREDENTIALS = credentials('docker-hub-credentials')
-        KUBECONFIG = credentials('kubeconfig')
         DOCKER_IMAGE = 'deku013/webapp'
         DOCKER_TAG = "build-${env.BUILD_NUMBER}"
     }
@@ -35,6 +33,7 @@ pipeline {
                     echo \"${DOCKERHUB_CREDENTIALS_PSW}\" | docker login -u \"${DOCKERHUB_CREDENTIALS_USR}\" --password-stdin
                     docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
                     docker push ${DOCKER_IMAGE}:latest
+                    docker logout
                     """
                 }
             }
@@ -45,7 +44,7 @@ pipeline {
                 script {
                     sh """
                     # Update the image tag in deployment.yaml
-                    sed -i 's|image: ${DOCKER_IMAGE}:.*|image: ${DOCKER_IMAGE}:${DOCKER_TAG}|g' k8s-deployment.yaml
+                    sed -i 's|image: deku013/webapp:__IMAGE_TAG__|image: ${DOCKER_IMAGE}:${DOCKER_TAG}|g' k8s-deployment.yaml
                     
                     # Verify the change
                     echo "=== Updated k8s-deployment.yaml ==="
@@ -58,13 +57,16 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    sh """
-                    echo "=== Applying Kubernetes manifests ==="
-                    kubectl apply -f k8s-deployment.yaml
-                    
-                    echo "=== Waiting for deployment rollout ==="
-                    kubectl rollout status deployment/webapp-deployment --timeout=300s
-                    """
+                    withCredentials([file(credentialsId: 'k3s-config-remote.yaml', variable: 'KUBECONFIG_FILE')]) {
+                        sh """
+                        export KUBECONFIG=${KUBECONFIG_FILE}
+                        echo "=== Applying Kubernetes manifests ==="
+                        kubectl apply -f k8s-deployment.yaml
+                        
+                        echo "=== Waiting for deployment rollout ==="
+                        kubectl rollout status deployment/webapp-deployment --timeout=300s
+                        """
+                    }
                 }
             }
         }
@@ -72,19 +74,26 @@ pipeline {
         stage('Smoke Test') {
             steps {
                 script {
-                    sh """
-                    echo "=== Waiting for pods to be ready ==="
-                    sleep 30
-                    
-                    echo "=== Pods Status ==="
-                    kubectl get pods -o wide -l app=webapp
-                    
-                    echo "=== Services Status ==="
-                    kubectl get services
-                    
-                    echo "=== Deployment Status ==="
-                    kubectl get deployment webapp-deployment
-                    """
+                    withCredentials([file(credentialsId: 'k3s-config-remote.yaml', variable: 'KUBECONFIG_FILE')]) {
+                        sh """
+                        export KUBECONFIG=${KUBECONFIG_FILE}
+                        echo "=== Waiting for pods to be ready ==="
+                        sleep 30
+                        
+                        echo "=== Pods Status ==="
+                        kubectl get pods -o wide -l app=webapp
+                        
+                        echo "=== Services Status ==="
+                        kubectl get services -l app=webapp
+                        
+                        echo "=== Deployment Status ==="
+                        kubectl get deployment webapp-deployment -o wide
+                        
+                        echo "=== Testing application ==="
+                        # Get the service and test if it's accessible
+                        kubectl get svc webapp-service
+                        """
+                    }
                 }
             }
         }
@@ -93,10 +102,6 @@ pipeline {
     post {
         always {
             script {
-                // Cleanup Docker credentials
-                sh 'docker logout || true'
-                
-                // Save deployment information
                 currentBuild.description = "Image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
             }
         }
@@ -111,6 +116,8 @@ pipeline {
                     Build Number: ${env.BUILD_NUMBER}
                     Docker Image: ${DOCKER_IMAGE}:${DOCKER_TAG}
                     Build URL: ${env.BUILD_URL}
+                    
+                    The application has been deployed to Kubernetes.
                     """,
                     to: "jhaa98676@gmail.com"
                 )
@@ -126,6 +133,8 @@ pipeline {
                     Application: ${env.JOB_NAME}
                     Build Number: ${env.BUILD_NUMBER}
                     Build URL: ${env.BUILD_URL}
+                    
+                    Please check Jenkins logs for details.
                     """,
                     to: "jhaa98676@gmail.com"
                 )
