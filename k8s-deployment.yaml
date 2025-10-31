@@ -28,13 +28,13 @@ spec:
             cpu: "100m"
         livenessProbe:
           httpGet:
-            path: /  # Changed from /health to root
+            path: /health  # Using your health endpoint
             port: 80
-          initialDelaySeconds: 15  # Increased for app startup
+          initialDelaySeconds: 15
           periodSeconds: 10
         readinessProbe:
           httpGet:
-            path: /  # Changed from /health to root
+            path: /health  # Using your health endpoint
             port: 80
           initialDelaySeconds: 5
           periodSeconds: 5
@@ -43,6 +43,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: webapp-service
+  labels:
+    app: webapp
 spec:
   selector:
     app: webapp
