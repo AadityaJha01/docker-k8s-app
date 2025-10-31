@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: webapp
-        image: deku013/webapp:BUILD_NUMBER  # This will be replaced by Jenkins
+        image: deku013/webapp:__IMAGE_TAG__  # This will be replaced by Jenkins
         ports:
         - containerPort: 80
         resources:
