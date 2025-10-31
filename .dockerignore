@@ -1,0 +1,6 @@
+.git
+.gitignore
+README.md
+Jenkinsfile
+k8s-deployment.yaml
+.dockerignore
