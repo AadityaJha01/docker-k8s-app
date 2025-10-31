@@ -5,7 +5,7 @@ pipeline {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
         KUBECONFIG = credentials('kubeconfig')
         DOCKER_IMAGE = 'deku013/webapp'
-        DOCKER_TAG = "build-${BUILD_NUMBER}"
+        DOCKER_TAG = "build-${env.BUILD_NUMBER}"
     }
     
     stages {
@@ -103,36 +103,40 @@ pipeline {
             }
         }
         success {
-            emailext (
-                subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-                body: """
-                Pipeline completed successfully!
-                
-                Application: ${env.JOB_NAME}
-                Build Number: ${env.BUILD_NUMBER}
-                Docker Image: ${DOCKER_IMAGE}:${DOCKER_TAG}
-                Build URL: ${env.BUILD_URL}
-                
-                Deployment Status:
-                - $(kubectl get deployment webapp-deployment -o jsonpath='{.status.availableReplicas}')/$(kubectl get deployment webapp-deployment -o jsonpath='{.status.replicas}') pods available
-                """,
-                to: "jhaa98676@gmail.com"
-            )
+            script {
+                emailext (
+                    subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+                    body: """
+                    Pipeline completed successfully!
+                    
+                    Application: ${env.JOB_NAME}
+                    Build Number: ${env.BUILD_NUMBER}
+                    Docker Image: ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    Build URL: ${env.BUILD_URL}
+                    
+                    Deployment Status:
+                    - Application deployed successfully
+                    """,
+                    to: "jhaa98676@gmail.com"
+                )
+            }
         }
         failure {
-            emailext (
-                subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-                body: """
-                Pipeline failed!
-                
-                Application: ${env.JOB_NAME}
-                Build Number: ${env.BUILD_NUMBER}
-                Build URL: ${env.BUILD_URL}
-                
-                Please check the Jenkins logs for details.
-                """,
-                to: "jhaa98676@gmail.com"
-            )
+            script {
+                emailext (
+                    subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+                    body: """
+                    Pipeline failed!
+                    
+                    Application: ${env.JOB_NAME}
+                    Build Number: ${env.BUILD_NUMBER}
+                    Build URL: ${env.BUILD_URL}
+                    
+                    Please check the Jenkins logs for details.
+                    """,
+                    to: "jhaa98676@gmail.com"
+                )
+            }
         }
     }
 }
