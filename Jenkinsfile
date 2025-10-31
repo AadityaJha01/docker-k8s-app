@@ -2,7 +2,8 @@ pipeline {
     agent any
     
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
+        // Since you checked "Treat username as secret", use _USR and _PSW suffixes
+        DOCKERHUB_CREDENTIALS = credentials('docker-hub-credentials')
         KUBECONFIG = credentials('kubeconfig')
         DOCKER_IMAGE = 'deku013/webapp'
         DOCKER_TAG = "build-${env.BUILD_NUMBER}"
@@ -83,9 +84,6 @@ pipeline {
                     
                     echo "=== Deployment Status ==="
                     kubectl get deployment webapp-deployment
-                    
-                    echo "=== Checking pod logs ==="
-                    kubectl logs -l app=webapp --tail=10
                     """
                 }
             }
@@ -94,11 +92,11 @@ pipeline {
     
     post {
         always {
-            sh 'docker logout || true'
-            cleanWs()
-            
-            // Save deployment information
             script {
+                // Cleanup Docker credentials
+                sh 'docker logout || true'
+                
+                // Save deployment information
                 currentBuild.description = "Image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
             }
         }
@@ -113,9 +111,6 @@ pipeline {
                     Build Number: ${env.BUILD_NUMBER}
                     Docker Image: ${DOCKER_IMAGE}:${DOCKER_TAG}
                     Build URL: ${env.BUILD_URL}
-                    
-                    Deployment Status:
-                    - Application deployed successfully
                     """,
                     to: "jhaa98676@gmail.com"
                 )
@@ -131,8 +126,6 @@ pipeline {
                     Application: ${env.JOB_NAME}
                     Build Number: ${env.BUILD_NUMBER}
                     Build URL: ${env.BUILD_URL}
-                    
-                    Please check the Jenkins logs for details.
                     """,
                     to: "jhaa98676@gmail.com"
                 )
